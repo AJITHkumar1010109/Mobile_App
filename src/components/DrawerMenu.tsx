@@ -42,15 +42,15 @@ interface MenuItem {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline' },
+  // { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline' },
   { id: 'customer-details', label: 'Customer Details', icon: 'people-outline' },
-  { id: 'self-details', label: 'Self Details', icon: 'lock-closed-outline', isPinProtected: true },
-  { id: 'analytics', label: 'Analytics', icon: 'bar-chart-outline' },
-  { id: 'orders', label: 'Orders', icon: 'cart-outline' },
-  { id: 'customers', label: 'Customers', icon: 'person-outline' },
-  { id: 'products', label: 'Products', icon: 'pricetag-outline' },
-  { id: 'messages', label: 'Messages', icon: 'chatbubble-ellipses-outline' },
-  { id: 'settings', label: 'Settings', icon: 'settings-outline' },
+  // { id: 'self-details', label: 'Self Details', icon: 'lock-closed-outline', isPinProtected: true },
+  // { id: 'analytics', label: 'Analytics', icon: 'bar-chart-outline' },
+  // { id: 'orders', label: 'Orders', icon: 'cart-outline' },
+  // { id: 'customers', label: 'Customers', icon: 'person-outline' },
+  // { id: 'products', label: 'Products', icon: 'pricetag-outline' },
+  // { id: 'messages', label: 'Messages', icon: 'chatbubble-ellipses-outline' },
+  // { id: 'settings', label: 'Settings', icon: 'settings-outline' },
 ];
 
 export const DrawerMenu: React.FC<DrawerMenuProps> = ({

@@ -303,6 +303,9 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
               <View style={[styles.field, { flex: 1 }]}>
                 <Text style={[styles.label, { color: theme.text }]}>
                   Amount Received (₹) <Text style={{ color: theme.danger }}>*</Text>
+                  {/* {isEditing && paymentCount > 0 ? (
+                    <Text style={{ fontSize: 10, color: theme.warning, textTransform: 'none' }}> (Locked)</Text>
+                  ) : null} */}
                 </Text>
                 <TextInput
                   style={[
@@ -321,6 +324,11 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   value={form.amount_received}
                   onChangeText={v => updateField('amount_received', v)}
                 />
+                {isEditing && paymentCount > 0 ? (
+                  <Text style={{ fontSize: 10, color: theme.textMuted, marginTop: 2 }}>
+                    Locked after Save Payment
+                  </Text>
+                ) : null}
                 {errors.amount_received ? (
                   <Text style={[styles.errText, { color: theme.danger }]}>{errors.amount_received}</Text>
                 ) : null}

@@ -133,8 +133,18 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
   const totalReceived = customers.reduce((sum, c) => sum + (Number(c.amount_received) || 0), 0);
   const totalBalance = customers.reduce((sum, c) => sum + (Number(c.amount_balance) || 0), 0);
 
+  // Count payments recorded via "Save Payment" button (excluding initial creation payment)
+  const getSavedPaymentCount = (customer: CustomerData | null | undefined): number => {
+    if (!customer || !customer.payment_history) return 0;
+    const additionalPayments = customer.payment_history.filter(
+      p => p.note !== 'Initial payment'
+    );
+    return Math.max(additionalPayments.length, Math.max(0, customer.payment_history.length - 1));
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.bg }]}>
+
       {/* Search & Add Action Bar */}
       <View style={[styles.toolbar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={[styles.searchBox, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
@@ -165,6 +175,19 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
             <Text style={styles.addBtnText}>Add</Text>
           </LinearGradient>
         </TouchableOpacity>
+      </View>
+
+      {/* Overall Total Amount Banner */}
+      <View style={[styles.overallBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={styles.overallLeft}>
+          <LinearGradient colors={theme.gradientPrimary} style={styles.overallDot}>
+            <Ionicons name="cash" size={12} color="#fff" />
+          </LinearGradient>
+          <Text style={[styles.overallLabel, { color: theme.textMuted }]}>Overall Total</Text>
+        </View>
+        <Text style={[styles.overallValue, { color: theme.accent }]}>
+          ₹{totalReceivable.toLocaleString()}
+        </Text>
       </View>
 
       {/* Summary Highlights */}
@@ -368,7 +391,7 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
       <CustomerFormModal
         visible={formModalVisible}
         initial={selectedCustomer}
-        paymentCount={selectedCustomer?.payment_history?.length || 0}
+        paymentCount={getSavedPaymentCount(selectedCustomer)}
         onSave={handleSaveCustomer}
         onClose={() => {
           setFormModalVisible(false);
@@ -445,10 +468,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  overallBar: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  overallLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  overallDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overallLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  overallValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
   summaryBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 8,
     gap: 10,
   },
   summaryPill: {

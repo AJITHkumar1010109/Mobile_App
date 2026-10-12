@@ -5,9 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
+import { AnimatedTempo } from './AnimatedTempo';
+
 interface HeaderProps {
   title: string;
-  onOpenDrawer: () => void;
+  onOpenDrawer?: () => void;
   onOpenProfile: () => void;
 }
 
@@ -27,13 +29,9 @@ export const Header: React.FC<HeaderProps> = ({ title, onOpenDrawer, onOpenProfi
       ]}
     >
       <View style={styles.leftRow}>
-        <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: theme.inputBg }]}
-          onPress={onOpenDrawer}
-          accessibilityLabel="Open Menu"
-        >
-          <Ionicons name="menu-outline" size={24} color={theme.textHeading} />
-        </TouchableOpacity>
+        {/* Animated Tempo */}
+        <AnimatedTempo />
+
         <Text style={[styles.title, { color: theme.textHeading }]} numberOfLines={1}>
           {title}
         </Text>

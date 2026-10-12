@@ -31,7 +31,7 @@ function MainApp() {
   const { theme, themeMode } = useTheme();
   const { isLoggedIn, isLoading, user } = useAuth();
 
-  const [currentScreen, setCurrentScreen] = useState<ScreenName>('dashboard');
+  const [currentScreen, setCurrentScreen] = useState<ScreenName>('customer-details');
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
   const [toast, setToast] = useState<ToastData | null>(null);
@@ -128,7 +128,6 @@ function MainApp() {
       {/* Top Header */}
       <Header
         title={screenTitles[currentScreen]}
-        onOpenDrawer={() => setDrawerVisible(true)}
         onOpenProfile={() => setProfileVisible(true)}
       />
 
@@ -141,11 +140,11 @@ function MainApp() {
             <SelfDetailsScreen
               onLock={() => {
                 setSelfUnlocked(false);
-                setCurrentScreen('dashboard');
+                setCurrentScreen('customer-details');
               }}
             />
           ) : (
-            <DashboardScreen onNavigate={setCurrentScreen} />
+            <CustomerDetailsScreen showToast={showToast} />
           )
         )}
         {currentScreen === 'analytics' && <AnalyticsScreen />}
@@ -156,7 +155,7 @@ function MainApp() {
         {currentScreen === 'settings' && <SettingsScreen showToast={showToast} />}
       </View>
 
-      {/* Navigation Drawer */}
+      {/* Navigation Drawer (Commented Out)
       <DrawerMenu
         visible={drawerVisible}
         activeScreen={currentScreen}
@@ -166,6 +165,7 @@ function MainApp() {
         onSelfDetailsClick={handleSelfDetailsClick}
         onClose={() => setDrawerVisible(false)}
       />
+      */}
 
       {/* 6-Digit PIN Modal */}
       {user?.userId && (
