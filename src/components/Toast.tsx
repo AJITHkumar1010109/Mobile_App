@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 
 export interface ToastData {
@@ -16,8 +17,13 @@ interface ToastProps {
 
 export const Toast: React.FC<ToastProps> = ({ toast, onDismiss, duration = 3000 }) => {
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-20)).current;
+
+  const statusBarHeight = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0;
+  const safeTop = Math.max(insets.top, statusBarHeight);
+  const toastTop = safeTop + 66;
 
   useEffect(() => {
     if (toast) {
@@ -67,6 +73,7 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss, duration = 3000 
       style={[
         styles.container,
         {
+          top: toastTop,
           backgroundColor: bgColor,
           borderColor,
           opacity,
@@ -83,7 +90,6 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss, duration = 3000 
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 55,
     left: 20,
     right: 20,
     zIndex: 99999,

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  SafeAreaView,
   View,
   StatusBar,
   ActivityIndicator,
@@ -8,6 +7,11 @@ import {
   Text,
   Platform,
 } from 'react-native';
+import {
+  SafeAreaProvider,
+  initialWindowMetrics,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 
 if (Platform.OS === 'web') {
   const style = document.createElement('style');
@@ -49,6 +53,7 @@ import { API_ENDPOINTS } from './src/config/api';
 function MainApp() {
   const { theme, themeMode } = useTheme();
   const { isLoggedIn, isLoading, user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('customer-details');
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -112,15 +117,15 @@ function MainApp() {
 
   if (!isLoggedIn) {
     return (
-      <SafeAreaView style={styles.fullScreen}>
+      <View style={[styles.fullScreen, { backgroundColor: '#667eea' }]}>
         <StatusBar
           barStyle="light-content"
-          backgroundColor="#667eea"
-          translucent={false}
+          backgroundColor="transparent"
+          translucent={true}
         />
         <LoginScreen showToast={showToast} />
         <Toast toast={toast} onDismiss={() => setToast(null)} />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -137,11 +142,11 @@ function MainApp() {
   };
 
   return (
-    <SafeAreaView style={[styles.fullScreen, { backgroundColor: theme.headerBg }]}>
+    <View style={[styles.fullScreen, { backgroundColor: theme.bg }]}>
       <StatusBar
         barStyle={themeMode === 'dark' ? 'light-content' : 'dark-content'}
-        backgroundColor={theme.headerBg}
-        translucent={false}
+        backgroundColor="transparent"
+        translucent={true}
       />
 
       {/* Top Header */}
@@ -151,7 +156,7 @@ function MainApp() {
       />
 
       {/* Main Screen Body */}
-      <View style={[styles.body, { backgroundColor: theme.bg }]}>
+      <View style={[styles.body, { backgroundColor: theme.bg, paddingBottom: insets.bottom }]}>
         {currentScreen === 'dashboard' && <DashboardScreen onNavigate={setCurrentScreen} />}
         {currentScreen === 'customer-details' && <CustomerDetailsScreen showToast={showToast} />}
         {currentScreen === 'self-details' && (
@@ -206,17 +211,19 @@ function MainApp() {
 
       {/* Toast Alert */}
       <Toast toast={toast} onDismiss={() => setToast(null)} />
-    </SafeAreaView>
+    </View>
   );
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <MainApp />
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <ThemeProvider>
+        <AuthProvider>
+          <MainApp />
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
