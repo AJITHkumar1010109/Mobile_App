@@ -9,6 +9,7 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,11 +76,18 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
     const url = isEdit ? API_ENDPOINTS.customerById(data._id!) : API_ENDPOINTS.customers;
     const method = isEdit ? 'PUT' : 'POST';
 
+    const payload = {
+      ...data,
+      total_amount: Number(data.total_amount) || 0,
+      amount_received: Number(data.amount_received) || 0,
+      amount_balance: Math.max(0, (Number(data.total_amount) || 0) - (Number(data.amount_received) || 0)),
+    };
+
     try {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
@@ -135,6 +143,17 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
       p => p.note !== 'Initial payment'
     );
     return Math.max(additionalPayments.length, Math.max(0, customer.payment_history.length - 1));
+  };
+
+  const handleCallPhone = async (phone: string | number) => {
+    const clean = String(phone).replace(/[^\d+]/g, '');
+    if (!clean) return;
+    const url = `tel:${clean}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      showToast('Could not open phone dialer', 'error');
+    }
   };
 
   return (
@@ -251,9 +270,17 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
                         {item.name}
                       </Text>
                       {item.phone ? (
-                        <Text style={[styles.customerPhone, { color: theme.textMuted }]}>
-                          📞 {item.phone}
-                        </Text>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() => handleCallPhone(item.phone)}
+                          style={styles.phoneTouchWrap}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="call" size={13} color={theme.accent} />
+                          <Text style={[styles.customerPhone, { color: theme.textMuted }]}>
+                            {item.phone}
+                          </Text>
+                        </TouchableOpacity>
                       ) : null}
                     </View>
                   </View>
@@ -623,7 +650,14 @@ const styles = StyleSheet.create({
   },
   customerPhone: {
     fontSize: 12,
-    marginTop: 2,
+    fontWeight: '500',
+  },
+  phoneTouchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 3,
+    alignSelf: 'flex-start',
   },
   statusPill: {
     paddingHorizontal: 10,

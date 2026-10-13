@@ -19,9 +19,9 @@ export interface CustomerData {
   native: string;
   district: string;
   address: string;
-  amount_received: string;
-  amount_balance: string;
-  total_amount: string;
+  amount_received: string | number;
+  amount_balance: string | number;
+  total_amount: string | number;
   status: 'Completed' | 'Pending';
   payment_history?: PaymentEntry[];
 }
@@ -35,6 +35,22 @@ interface CustomerFormModalProps {
 }
 
 type FieldError = Partial<Record<keyof CustomerData, string>>;
+
+const toSafeString = (val: unknown): string => {
+  if (val === undefined || val === null) return '';
+  return String(val);
+};
+
+const getFinancialValue = (obj: any, ...keys: string[]): string => {
+  if (!obj) return '';
+  for (const k of keys) {
+    const val = obj[k];
+    if (val !== undefined && val !== null && val !== '') {
+      return String(val);
+    }
+  }
+  return '';
+};
 
 export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   visible,
@@ -65,7 +81,30 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   useEffect(() => {
     if (visible) {
       if (initial) {
-        setForm({ ...initial });
+        const total = getFinancialValue(initial, 'total_amount', 'totalAmount', 'total');
+        const received = getFinancialValue(initial, 'amount_received', 'amountReceived', 'received', 'paid');
+        let balance = getFinancialValue(initial, 'amount_balance', 'amountBalance', 'balance');
+
+        if (balance === '' && (total !== '' || received !== '')) {
+          const t = parseFloat(total) || 0;
+          const r = parseFloat(received) || 0;
+          balance = String(Math.max(0, t - r));
+        }
+
+        setForm({
+          _id: initial._id,
+          name: toSafeString(initial.name),
+          email: toSafeString(initial.email),
+          phone: toSafeString(initial.phone),
+          native: toSafeString(initial.native),
+          district: toSafeString(initial.district),
+          address: toSafeString(initial.address),
+          total_amount: total,
+          amount_received: received,
+          amount_balance: balance,
+          status: initial.status || ((parseFloat(balance) || 0) <= 0 ? 'Completed' : 'Pending'),
+          payment_history: initial.payment_history,
+        });
       } else {
         setForm(emptyForm);
       }
@@ -78,8 +117,8 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     setForm(prev => {
       const next = { ...prev, [key]: val };
       if (key === 'total_amount' || key === 'amount_received') {
-        const total = parseFloat(key === 'total_amount' ? val : prev.total_amount) || 0;
-        const received = parseFloat(key === 'amount_received' ? val : prev.amount_received) || 0;
+        const total = parseFloat(key === 'total_amount' ? val : toSafeString(prev.total_amount)) || 0;
+        const received = parseFloat(key === 'amount_received' ? val : toSafeString(prev.amount_received)) || 0;
         const balance = Math.max(0, total - received);
         next.amount_balance = balance.toString();
         next.status = balance <= 0 ? 'Completed' : 'Pending';
@@ -90,21 +129,30 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   };
 
   const handlePhone = (v: string) => {
-    const digits = v.replace(/\D/g, '').slice(0, 10);
+    const digits = toSafeString(v).replace(/\D/g, '').slice(0, 10);
     updateField('phone', digits);
   };
 
   const validate = (): boolean => {
     const errs: FieldError = {};
-    if (!form.name.trim()) errs.name = 'Full name is required';
-    if (!form.email.trim()) errs.email = 'Email address is required';
-    if (!form.phone.trim()) errs.phone = 'Phone number is required';
-    else if (form.phone.length !== 10) errs.phone = 'Phone must be exactly 10 digits';
-    if (!form.native.trim()) errs.native = 'Native is required';
-    if (!form.district.trim()) errs.district = 'District is required';
-    if (!form.address.trim()) errs.address = 'Address is required';
-    if (form.amount_received === '') errs.amount_received = 'Amount received is required';
-    if (form.total_amount === '') errs.total_amount = 'Total amount is required';
+    const name = toSafeString(form.name).trim();
+    const email = toSafeString(form.email).trim();
+    const phone = toSafeString(form.phone).trim();
+    const native = toSafeString(form.native).trim();
+    const district = toSafeString(form.district).trim();
+    const address = toSafeString(form.address).trim();
+    const amount_received = toSafeString(form.amount_received).trim();
+    const total_amount = toSafeString(form.total_amount).trim();
+
+    if (!name) errs.name = 'Full name is required';
+    if (!email) errs.email = 'Email address is required';
+    if (!phone) errs.phone = 'Phone number is required';
+    else if (phone.length !== 10) errs.phone = 'Phone must be exactly 10 digits';
+    if (!native) errs.native = 'Native is required';
+    if (!district) errs.district = 'District is required';
+    if (!address) errs.address = 'Address is required';
+    if (amount_received === '') errs.amount_received = 'Amount received is required';
+    if (total_amount === '') errs.total_amount = 'Total amount is required';
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -114,7 +162,20 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
     if (!validate()) return;
     setSubmitting(true);
     try {
-      await onSave(form);
+      const dataToSave: CustomerData = {
+        ...form,
+        name: toSafeString(form.name).trim(),
+        email: toSafeString(form.email).trim(),
+        phone: toSafeString(form.phone).trim(),
+        native: toSafeString(form.native).trim(),
+        district: toSafeString(form.district).trim(),
+        address: toSafeString(form.address).trim(),
+        total_amount: toSafeString(form.total_amount).trim(),
+        amount_received: toSafeString(form.amount_received).trim(),
+        amount_balance: toSafeString(form.amount_balance).trim(),
+        status: (parseFloat(toSafeString(form.amount_balance)) || 0) <= 0 ? 'Completed' : 'Pending',
+      };
+      await onSave(dataToSave);
       onClose();
     } finally {
       setSubmitting(false);
@@ -129,6 +190,11 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.overlay}
       >
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
+          onPress={onClose}
+        />
         <View style={[styles.container, { backgroundColor: theme.surface }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: theme.border }]}>
@@ -148,7 +214,16 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
           </View>
 
           {/* Form Fields */}
-          <ScrollView style={styles.scrollBody} contentContainerStyle={styles.scrollContent}>
+          <ScrollView
+            style={styles.scrollBody}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            nestedScrollEnabled={true}
+            showsVerticalScrollIndicator={true}
+            bounces={true}
+            alwaysBounceVertical={true}
+          >
             {/* Full Name */}
             <View style={styles.field}>
               <Text style={[styles.label, { color: theme.text }]}>
@@ -165,7 +240,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 ]}
                 placeholder="Enter full name"
                 placeholderTextColor={theme.textMuted}
-                value={form.name}
+                value={toSafeString(form.name)}
                 onChangeText={v => updateField('name', v)}
               />
               {errors.name ? <Text style={[styles.errText, { color: theme.danger }]}>{errors.name}</Text> : null}
@@ -189,7 +264,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 placeholderTextColor={theme.textMuted}
                 keyboardType="email-address"
                 autoCapitalize="none"
-                value={form.email}
+                value={toSafeString(form.email)}
                 onChangeText={v => updateField('email', v)}
               />
               {errors.email ? <Text style={[styles.errText, { color: theme.danger }]}>{errors.email}</Text> : null}
@@ -213,7 +288,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 placeholderTextColor={theme.textMuted}
                 keyboardType="number-pad"
                 maxLength={10}
-                value={form.phone}
+                value={toSafeString(form.phone)}
                 onChangeText={handlePhone}
               />
               {errors.phone ? <Text style={[styles.errText, { color: theme.danger }]}>{errors.phone}</Text> : null}
@@ -236,7 +311,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   ]}
                   placeholder="City / Native"
                   placeholderTextColor={theme.textMuted}
-                  value={form.native}
+                  value={toSafeString(form.native)}
                   onChangeText={v => updateField('native', v)}
                 />
                 {errors.native ? <Text style={[styles.errText, { color: theme.danger }]}>{errors.native}</Text> : null}
@@ -257,7 +332,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   ]}
                   placeholder="District"
                   placeholderTextColor={theme.textMuted}
-                  value={form.district}
+                  value={toSafeString(form.district)}
                   onChangeText={v => updateField('district', v)}
                 />
                 {errors.district ? <Text style={[styles.errText, { color: theme.danger }]}>{errors.district}</Text> : null}
@@ -281,7 +356,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 placeholder="0"
                 placeholderTextColor={theme.textMuted}
                 keyboardType="numeric"
-                value={form.total_amount}
+                value={toSafeString(form.total_amount)}
                 onChangeText={v => updateField('total_amount', v)}
               />
               {errors.total_amount ? <Text style={[styles.errText, { color: theme.danger }]}>{errors.total_amount}</Text> : null}
@@ -292,9 +367,6 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
               <View style={[styles.field, { flex: 1 }]}>
                 <Text style={[styles.label, { color: theme.text }]}>
                   Amount Received (₹) <Text style={{ color: theme.danger }}>*</Text>
-                  {/* {isEditing && paymentCount > 0 ? (
-                    <Text style={{ fontSize: 10, color: theme.warning, textTransform: 'none' }}> (Locked)</Text>
-                  ) : null} */}
                 </Text>
                 <TextInput
                   style={[
@@ -310,7 +382,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   placeholderTextColor={theme.textMuted}
                   keyboardType="numeric"
                   editable={!(isEditing && paymentCount > 0)}
-                  value={form.amount_received}
+                  value={toSafeString(form.amount_received)}
                   onChangeText={v => updateField('amount_received', v)}
                 />
                 {isEditing && paymentCount > 0 ? (
@@ -339,7 +411,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                   ]}
                   placeholder="0"
                   editable={false}
-                  value={form.amount_balance}
+                  value={toSafeString(form.amount_balance)}
                 />
               </View>
             </View>
@@ -363,7 +435,7 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
                 placeholderTextColor={theme.textMuted}
                 multiline
                 numberOfLines={3}
-                value={form.address}
+                value={toSafeString(form.address)}
                 onChangeText={v => updateField('address', v)}
               />
               {errors.address ? <Text style={[styles.errText, { color: theme.danger }]}>{errors.address}</Text> : null}
@@ -400,15 +472,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+  },
   container: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '90%',
+    maxHeight: '92%',
+    flexShrink: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
     elevation: 20,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -431,10 +508,14 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollBody: {
+    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     paddingHorizontal: 20,
   },
   scrollContent: {
     paddingVertical: 16,
+    paddingBottom: 28,
     gap: 14,
   },
   field: {
