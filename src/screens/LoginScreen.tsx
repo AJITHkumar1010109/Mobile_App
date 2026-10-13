@@ -132,6 +132,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ showToast }) => {
                       autoCapitalize="none"
                       value={phone}
                       onChangeText={setPhone}
+                      autoComplete="off"
                     />
                   </View>
                 </View>
@@ -161,6 +162,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ showToast }) => {
                       secureTextEntry={!showPassword}
                       value={password}
                       onChangeText={setPassword}
+                      autoComplete="off"
                     />
                     <TouchableOpacity
                       onPress={() => setShowPassword(!showPassword)}
@@ -283,7 +285,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     height: 50,
-  },
+    outline: 'none',
+  } as any,
   inputIcon: {
     marginRight: 10,
   },
@@ -291,7 +294,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     height: '100%',
-  },
+    outlineWidth: 0,
+    outlineStyle: 'none',
+    backgroundColor: 'transparent',
+  } as any,
   eyeBtn: {
     padding: 6,
   },

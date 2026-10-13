@@ -6,7 +6,26 @@ import {
   ActivityIndicator,
   StyleSheet,
   Text,
+  Platform,
 } from 'react-native';
+
+if (Platform.OS === 'web') {
+  const style = document.createElement('style');
+  style.textContent = `
+    input:-webkit-autofill,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:hover {
+      -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+      box-shadow: 0 0 0px 1000px transparent inset !important;
+      -webkit-text-fill-color: #f8fafc !important;
+      caret-color: #f8fafc !important;
+      background-color: transparent !important;
+      transition: background-color 9999s ease-in-out 0s;
+    }
+    input, input:focus { outline: none !important; background-color: transparent !important; }
+  `;
+  document.head.appendChild(style);
+}
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';

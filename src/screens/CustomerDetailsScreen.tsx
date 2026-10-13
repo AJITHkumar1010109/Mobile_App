@@ -9,7 +9,6 @@ import {
   FlatList,
   RefreshControl,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +29,7 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
 
   // Modals
   const [formModalVisible, setFormModalVisible] = useState(false);
@@ -40,6 +40,9 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
 
   const [histModalVisible, setHistModalVisible] = useState(false);
   const [histCustomer, setHistCustomer] = useState<CustomerData | null>(null);
+
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CustomerData | null>(null);
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -93,33 +96,25 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
 
   const handleDeleteCustomer = (customer: CustomerData) => {
     if (!customer._id) return;
+    setDeleteTarget(customer);
+    setDeleteConfirmVisible(true);
+  };
 
-    Alert.alert(
-      'Delete Customer',
-      `Are you sure you want to delete ${customer.name}? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await fetch(API_ENDPOINTS.customerById(customer._id!), {
-                method: 'DELETE',
-              });
-              if (res.ok) {
-                fetchCustomers();
-                showToast('Customer deleted successfully', 'success');
-              } else {
-                showToast('Failed to delete customer', 'error');
-              }
-            } catch {
-              showToast('Network error while deleting', 'error');
-            }
-          },
-        },
-      ]
-    );
+  const confirmDelete = async () => {
+    if (!deleteTarget?._id) return;
+    setDeleteConfirmVisible(false);
+    try {
+      const res = await fetch(API_ENDPOINTS.customerById(deleteTarget._id), { method: 'DELETE' });
+      if (res.ok) {
+        fetchCustomers();
+        showToast('Customer deleted successfully', 'success');
+      } else {
+        showToast('Failed to delete customer', 'error');
+      }
+    } catch {
+      showToast('Network error while deleting', 'error');
+    }
+    setDeleteTarget(null);
   };
 
   const filtered = customers.filter(c =>
@@ -147,7 +142,7 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
 
       {/* Search & Add Action Bar */}
       <View style={[styles.toolbar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <View style={[styles.searchBox, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+        <View style={[styles.searchBox, { backgroundColor: theme.inputBg, borderColor: theme.border, outline: 'none' }]}>
           <Ionicons name="search-outline" size={18} color={theme.textMuted} />
           <TextInput
             style={[styles.searchInput, { color: theme.textHeading }]}
@@ -155,6 +150,8 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
             placeholderTextColor={theme.textMuted}
             value={search}
             onChangeText={setSearch}
+            onFocus={() => setSearchFocused(false)}
+            onBlur={() => setSearchFocused(false)}
           />
           {search ? (
             <TouchableOpacity onPress={() => setSearch('')}>
@@ -413,6 +410,36 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
         }}
       />
 
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmVisible && (
+        <View style={styles.deleteOverlay}>
+          <View style={[styles.deleteDialog, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Ionicons name="warning-outline" size={36} color={theme.danger} />
+            <Text style={[styles.deleteTitle, { color: theme.textHeading }]}>Delete Customer</Text>
+            <Text style={[styles.deleteMsg, { color: theme.textMuted }]}>
+              Are you sure you want to delete{' '}
+              <Text style={{ color: theme.textHeading, fontWeight: '700' }}>{deleteTarget?.name}</Text>?
+              {' '}This action cannot be undone.
+            </Text>
+            <View style={styles.deleteActions}>
+              <TouchableOpacity
+                style={[styles.deleteCancelBtn, { borderColor: theme.border, backgroundColor: theme.inputBg }]}
+                onPress={() => { setDeleteConfirmVisible(false); setDeleteTarget(null); }}
+              >
+                <Text style={[styles.deleteCancelText, { color: theme.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.deleteConfirmBtn, { backgroundColor: theme.danger }]}
+                onPress={confirmDelete}
+              >
+                <Ionicons name="trash-outline" size={16} color="#fff" />
+                <Text style={styles.deleteConfirmText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Payment History Modal */}
       <PaymentHistoryModal
         visible={histModalVisible}
@@ -451,7 +478,9 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-  },
+    outlineWidth: 0,
+    outlineStyle: 'none',
+  } as any,
   addBtn: {
     borderRadius: 12,
     overflow: 'hidden',
@@ -669,6 +698,62 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  deleteOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  deleteDialog: {
+    width: '85%',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 24,
+    alignItems: 'center',
+    gap: 12,
+  },
+  deleteTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  deleteMsg: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  deleteActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+    width: '100%',
+  },
+  deleteCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  deleteCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  deleteConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  deleteConfirmText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '700',
   },
 });
