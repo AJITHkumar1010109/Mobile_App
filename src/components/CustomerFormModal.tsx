@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import {Modal,View,Text,TextInput,TouchableOpacity,StyleSheet,ScrollView,KeyboardAvoidingView,Platform,ActivityIndicator} from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Dimensions,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -36,9 +48,20 @@ interface CustomerFormModalProps {
 
 type FieldError = Partial<Record<keyof CustomerData, string>>;
 
+const { height: WINDOW_HEIGHT } = Dimensions.get('window');
+
 const toSafeString = (val: unknown): string => {
   if (val === undefined || val === null) return '';
   return String(val);
+};
+
+const parseNumericValue = (val: unknown): string => {
+  if (val === undefined || val === null || val === '') return '';
+  if (typeof val === 'number') {
+    return isNaN(val) ? '' : String(val);
+  }
+  const clean = String(val).replace(/[^0-9.]/g, '');
+  return clean;
 };
 
 const getFinancialValue = (obj: any, ...keys: string[]): string => {
@@ -46,7 +69,8 @@ const getFinancialValue = (obj: any, ...keys: string[]): string => {
   for (const k of keys) {
     const val = obj[k];
     if (val !== undefined && val !== null && val !== '') {
-      return String(val);
+      const parsed = parseNumericValue(val);
+      if (parsed !== '') return parsed;
     }
   }
   return '';
@@ -81,14 +105,24 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
   useEffect(() => {
     if (visible) {
       if (initial) {
-        const total = getFinancialValue(initial, 'total_amount', 'totalAmount', 'total');
-        const received = getFinancialValue(initial, 'amount_received', 'amountReceived', 'received', 'paid');
-        let balance = getFinancialValue(initial, 'amount_balance', 'amountBalance', 'balance');
+        let total = getFinancialValue(initial, 'total_amount', 'totalAmount', 'total', 'amount');
+        let received = getFinancialValue(initial, 'amount_received', 'amountReceived', 'received', 'paid', 'amountPaid');
+        let balance = getFinancialValue(initial, 'amount_balance', 'amountBalance', 'balance', 'due', 'pending');
 
-        if (balance === '' && (total !== '' || received !== '')) {
-          const t = parseFloat(total) || 0;
-          const r = parseFloat(received) || 0;
-          balance = String(Math.max(0, t - r));
+        const numTotal = parseFloat(total) || 0;
+        const numReceived = parseFloat(received) || 0;
+        const numBalance = parseFloat(balance) || 0;
+
+        // If balance is missing or 0 but total > received
+        if (balance === '' && total !== '') {
+          balance = String(Math.max(0, numTotal - numReceived));
+        } else if (numBalance === 0 && numTotal > numReceived && received !== '') {
+          balance = String(Math.max(0, numTotal - numReceived));
+        }
+
+        // If total is missing but received and balance exist
+        if (total === '' && (received !== '' || balance !== '')) {
+          total = String(numReceived + numBalance);
         }
 
         setForm({
@@ -100,8 +134,8 @@ export const CustomerFormModal: React.FC<CustomerFormModalProps> = ({
           district: toSafeString(initial.district),
           address: toSafeString(initial.address),
           total_amount: total,
-          amount_received: received,
-          amount_balance: balance,
+          amount_received: received !== '' ? received : '0',
+          amount_balance: balance !== '' ? balance : '0',
           status: initial.status || ((parseFloat(balance) || 0) <= 0 ? 'Completed' : 'Pending'),
           payment_history: initial.payment_history,
         });
@@ -476,10 +510,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
   },
   container: {
+    height: Platform.OS === 'web' ? Math.min(WINDOW_HEIGHT * 0.88, 720) : '88%',
+    maxHeight: '92%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '92%',
-    flexShrink: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.25,
@@ -509,13 +543,11 @@ const styles = StyleSheet.create({
   },
   scrollBody: {
     flex: 1,
-    flexGrow: 1,
-    flexShrink: 1,
     paddingHorizontal: 20,
   },
   scrollContent: {
     paddingVertical: 16,
-    paddingBottom: 28,
+    paddingBottom: 36,
     gap: 14,
   },
   field: {

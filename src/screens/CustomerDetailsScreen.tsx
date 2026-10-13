@@ -388,7 +388,7 @@ export const CustomerDetailsScreen: React.FC<CustomerDetailsScreenProps> = ({ sh
                   <TouchableOpacity
                     style={[styles.actionBtn, { backgroundColor: theme.inputBg, borderColor: theme.border }]}
                     onPress={() => {
-                      setSelectedCustomer(item);
+                      setSelectedCustomer({ ...item });
                       setFormModalVisible(true);
                     }}
                   >
